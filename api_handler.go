@@ -15,26 +15,61 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/swaggo/http-swagger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type apiHandler struct {
-	s   *MemoryStorage
-	geo *GeoService
+	s       *MemoryStorage
+	geo     *GeoService
+	metrics *Metrics
 }
 
-func NewAPIHandler(s *MemoryStorage, geo *GeoService) *apiHandler {
-	return &apiHandler{s: s, geo: geo}
+func NewAPIHandler(s *MemoryStorage, geo *GeoService, m *Metrics) *apiHandler {
+	return &apiHandler{s: s, geo: geo, metrics: m}
+}
+
+func (h *apiHandler) metricsMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if h.metrics == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			start := time.Now()
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			next.ServeHTTP(ww, r)
+
+			elapsed := time.Since(start)
+			routePattern := chi.RouteContext(r.Context()).RoutePattern()
+			if routePattern == "" {
+				routePattern = r.URL.Path
+			}
+			statusCode := strconv.Itoa(ww.Status())
+			method := r.Method
+
+			h.metrics.APIRequestsTotal.WithLabelValues(method, routePattern, statusCode).Inc()
+			h.metrics.APIRequestDuration.WithLabelValues(method, routePattern).Observe(elapsed.Seconds())
+		})
+	}
 }
 
 func (h *apiHandler) RegisterRoutes(r chi.Router, tokenAuth *jwtauth.JWTAuth, kc *KeycloakValidator) {
+	r.Use(h.metricsMiddleware())
+
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
+
+	if h.metrics != nil {
+		r.Handle("/metrics", promhttp.HandlerFor(h.metrics.Registry, promhttp.HandlerOpts{}))
+	}
 
 	if kc != nil {
 		// Режим Keycloak: токены выдаются самим Keycloak
