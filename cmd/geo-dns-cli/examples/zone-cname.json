@@ -1,0 +1,17 @@
+{
+  "origin": "cdn.example.com.",
+  "geo_tag": "default",
+  "soa": {
+    "ns": "ns1.example.com.",
+    "mbox": "admin.example.com.",
+    "serial": 2024010101,
+    "refresh": 86400,
+    "retry": 7200,
+    "expire": 3600000,
+    "min_ttl": 60
+  },
+  "records": [
+    { "name": "cdn.example.com.",     "type": "CNAME", "value": "cdn-global.fastly.net.", "ttl": 60 },
+    { "name": "static.example.com.", "type": "CNAME", "value": "cdn-global.fastly.net.", "ttl": 60 }
+  ]
+}
