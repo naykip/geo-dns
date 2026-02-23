@@ -5,15 +5,26 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
 )
 
 type DNSHandler struct {
 	Storage *MemoryStorage
+	Metrics *Metrics
+}
+
+func (h *DNSHandler) recordDNSMetrics(qtype, geoTag, status string, d time.Duration) {
+	if h.Metrics == nil {
+		return
+	}
+	h.Metrics.DNSQueriesTotal.WithLabelValues(qtype, geoTag, status).Inc()
+	h.Metrics.DNSQueryDuration.WithLabelValues(qtype, geoTag).Observe(d.Seconds())
 }
 
 func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+	start := time.Now()
 	msg := new(dns.Msg)
 	msg.SetReply(r)
 
@@ -23,15 +34,21 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 	for _, question := range r.Question {
 		queryName := strings.ToLower(question.Name)
+		qtype := dns.TypeToString[question.Qtype]
+		if qtype == "" {
+			qtype = strconv.Itoa(int(question.Qtype))
+		}
 
 		// AXFR доступен только для IP из whitelist
 		if question.Qtype == dns.TypeAXFR {
 			if !h.Storage.IsAllowed(parsedIP) {
 				msg.Rcode = dns.RcodeRefused
 				w.WriteMsg(msg)
+				h.recordDNSMetrics(qtype, geoTag, "refused", time.Since(start))
 				return
 			}
 			h.handleAXFR(w, r, queryName, geoTag)
+			h.recordDNSMetrics(qtype, geoTag, "answered", time.Since(start))
 			return
 		}
 
@@ -45,6 +62,9 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 					msg.Answer = append(msg.Answer, rr)
 				}
 			}
+			w.WriteMsg(msg)
+			h.recordDNSMetrics(qtype, geoTag, "answered", time.Since(start))
+			return
 		} else if question.Qtype == dns.TypeSOA {
 			soa := h.Storage.GetSOA(queryName, geoTag)
 			if soa != nil {
@@ -52,19 +72,28 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 					queryName, soa.MinTTL, soa.Ns, soa.Mbox, soa.Serial, soa.Refresh, soa.Retry, soa.Expire, soa.MinTTL))
 				msg.Answer = append(msg.Answer, rr)
 			}
+			w.WriteMsg(msg)
+			h.recordDNSMetrics(qtype, geoTag, "answered", time.Since(start))
+			return
 		} else if h.Storage.IsAllowed(parsedIP) {
 			msg.RecursionAvailable = true
 			c := new(dns.Client)
 			in, _, err := c.Exchange(r, "8.8.8.8:53")
 			if err == nil {
 				w.WriteMsg(in)
+				h.recordDNSMetrics(qtype, geoTag, "recursed", time.Since(start))
 				return
 			}
 		} else {
 			msg.Rcode = dns.RcodeRefused
+			w.WriteMsg(msg)
+			h.recordDNSMetrics(qtype, geoTag, "refused", time.Since(start))
+			return
 		}
 	}
+
 	w.WriteMsg(msg)
+	h.recordDNSMetrics("unknown", geoTag, "nxdomain", time.Since(start))
 }
 
 // buildRR конвертирует ResourceRecord в dns.RR нужного типа.
