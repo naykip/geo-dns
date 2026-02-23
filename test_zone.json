@@ -1,0 +1,12 @@
+{
+  "origin": "mycloud.local.",
+  "geo_tag": "LOCAL",
+  "records": [
+    {
+      "name": "mycloud.local.",
+      "type": "A",
+      "value": "10.0.0.50",
+      "ttl": 60
+    }
+  ]
+}

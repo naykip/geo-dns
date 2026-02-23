@@ -1,0 +1,6 @@
+.aider*
+.env
+*.swp
+*.swo
+certs/
+data/geo-db.mmdb

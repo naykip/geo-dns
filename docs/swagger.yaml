@@ -1,0 +1,147 @@
+basePath: /
+definitions:
+  main.ResourceRecord:
+    properties:
+      name:
+        example: example.com.
+        type: string
+      ttl:
+        example: 3600
+        type: integer
+      type:
+        example: A
+        type: string
+      value:
+        example: 1.2.3.4
+        type: string
+    type: object
+  main.SOAData:
+    properties:
+      expire:
+        example: 3600000
+        type: integer
+      mbox:
+        example: admin.example.com.
+        type: string
+      minttl:
+        example: 172800
+        type: integer
+      ns:
+        example: ns1.example.com.
+        type: string
+      refresh:
+        example: 86400
+        type: integer
+      retry:
+        example: 7200
+        type: integer
+      serial:
+        example: 2024052501
+        type: integer
+    type: object
+  main.Zone:
+    properties:
+      geo_tag:
+        example: RU
+        type: string
+      origin:
+        example: example.com.
+        type: string
+      records:
+        items:
+          $ref: '#/definitions/main.ResourceRecord'
+        type: array
+      soa:
+        $ref: '#/definitions/main.SOAData'
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for managing Geo-tagged DNS zones.
+  title: Geo-DNS API
+  version: "1.0"
+paths:
+  /admin/allow:
+    post:
+      parameters:
+      - description: 1.2.3.4/32
+        in: query
+        name: cidr
+        required: true
+        type: string
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Allow CIDR for Recursion
+      tags:
+      - admin
+  /geo/update:
+    post:
+      consumes:
+      - application/json
+      description: Triggers a download and reload of the MaxMind database
+      parameters:
+      - description: URL to .mmdb.gz file
+        in: query
+        name: url
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: GeoDB updated
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Update GeoIP Database
+      tags:
+      - geo
+  /login:
+    get:
+      responses:
+        "200":
+          description: JWT Token
+          schema:
+            type: string
+      summary: Login to get JWT
+  /zone:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new DNS zone or updates an existing one with a geo-tag
+      parameters:
+      - description: Zone Data
+        in: body
+        name: zone
+        required: true
+        schema:
+          $ref: '#/definitions/main.Zone'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Zone updated
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Add or Update Zone
+      tags:
+      - zones
+  /zones:
+    get:
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Get All Zones
+      tags:
+      - zones
+securityDefinitions:
+  ApiKeyAuth:
+    description: Введите 'Bearer <ваш_токен>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

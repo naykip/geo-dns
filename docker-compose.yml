@@ -1,0 +1,18 @@
+services:
+  geo-dns:
+    build: .
+    env_file:
+      - .env
+    container_name: geo-dns-app
+    restart: always
+    ports:
+      # Формат: "хост:контейнер"
+      - "1053:53/udp"
+      - "1053:53/tcp"
+      - "8080:8080/tcp"
+    volumes:
+      # Привязываем локальную папку data к папке внутри контейнера
+      - ./data:/root/data
+      - ./certs:/root/certs
+    environment:
+      - TZ=Europe/Moscow # Опционально: настройка часового пояса
