@@ -77,10 +77,17 @@ const docTemplate = `{
         },
         "/login": {
             "get": {
+                "description": "Basic Auth: username=admin, password=ADMIN_PASSWORD env var",
                 "summary": "Login to get JWT",
                 "responses": {
                     "200": {
                         "description": "JWT Token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "string"
                         }
@@ -219,25 +226,17 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "description": "Введите 'Bearer \u003cваш_токен\u003e'",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "localhost:8080",
-	BasePath:         "/",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Geo-DNS API",
-	Description:      "API for managing Geo-tagged DNS zones.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

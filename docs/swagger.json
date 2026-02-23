@@ -1,13 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "API for managing Geo-tagged DNS zones.",
-        "title": "Geo-DNS API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
-    "host": "localhost:8080",
-    "basePath": "/",
     "paths": {
         "/admin/allow": {
             "post": {
@@ -71,10 +66,17 @@
         },
         "/login": {
             "get": {
+                "description": "Basic Auth: username=admin, password=ADMIN_PASSWORD env var",
                 "summary": "Login to get JWT",
                 "responses": {
                     "200": {
                         "description": "JWT Token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "string"
                         }
@@ -212,14 +214,6 @@
                     "$ref": "#/definitions/main.SOAData"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "description": "Введите 'Bearer \u003cваш_токен\u003e'",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }
