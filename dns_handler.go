@@ -24,6 +24,17 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	for _, question := range r.Question {
 		queryName := strings.ToLower(question.Name)
 
+		// AXFR доступен только для IP из whitelist
+		if question.Qtype == dns.TypeAXFR {
+			if !h.Storage.IsAllowed(parsedIP) {
+				msg.Rcode = dns.RcodeRefused
+				w.WriteMsg(msg)
+				return
+			}
+			h.handleAXFR(w, r, queryName, geoTag)
+			return
+		}
+
 		records := h.Storage.GetRecordsForQuery(queryName, geoTag)
 
 		if len(records) > 0 {
@@ -119,4 +130,52 @@ func buildRR(rec ResourceRecord, qtype uint16) dns.RR {
 	}
 
 	return nil
+}
+
+// handleAXFR отдаёт полный дамп зоны (SOA + все записи + SOA).
+// Вызывается только для IP из whitelist.
+func (h *DNSHandler) handleAXFR(w dns.ResponseWriter, r *dns.Msg, origin, geoTag string) {
+	msg := new(dns.Msg)
+	msg.SetReply(r)
+	msg.Authoritative = true
+
+	zone := h.Storage.GetZone(origin, geoTag)
+	if zone == nil {
+		msg.Rcode = dns.RcodeNotAuth
+		w.WriteMsg(msg)
+		return
+	}
+
+	soaStr := fmt.Sprintf("%s %d IN SOA %s %s %d %d %d %d %d",
+		origin, zone.SOA.MinTTL, zone.SOA.Ns, zone.SOA.Mbox,
+		zone.SOA.Serial, zone.SOA.Refresh, zone.SOA.Retry, zone.SOA.Expire, zone.SOA.MinTTL)
+	soaRR, _ := dns.NewRR(soaStr)
+
+	msg.Answer = append(msg.Answer, soaRR)
+	for _, rec := range zone.Records {
+		if rr := buildRRAny(rec); rr != nil {
+			msg.Answer = append(msg.Answer, rr)
+		}
+	}
+	msg.Answer = append(msg.Answer, soaRR) // AXFR завершается повторной SOA
+
+	w.WriteMsg(msg)
+}
+
+// buildRRAny строит dns.RR без фильтрации по типу запроса (для AXFR).
+func buildRRAny(rec ResourceRecord) dns.RR {
+	// Переиспользуем buildRR, передавая нативный тип записи
+	typeMap := map[string]uint16{
+		"A":     dns.TypeA,
+		"AAAA":  dns.TypeAAAA,
+		"CNAME": dns.TypeCNAME,
+		"NS":    dns.TypeNS,
+		"TXT":   dns.TypeTXT,
+		"MX":    dns.TypeMX,
+	}
+	qtype, ok := typeMap[strings.ToUpper(rec.Type)]
+	if !ok {
+		return nil
+	}
+	return buildRR(rec, qtype)
 }

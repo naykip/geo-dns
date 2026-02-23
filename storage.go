@@ -172,6 +172,22 @@ func (s *MemoryStorage) GetSOA(name string, geoTag string) *SOAData {
 	return nil
 }
 
+// GetZone возвращает зону по origin с учётом geo-приоритета (тег → "default").
+func (s *MemoryStorage) GetZone(origin, geoTag string) *Zone {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	origin = strings.ToLower(origin)
+	for _, tag := range []string{geoTag, "default"} {
+		for _, zone := range s.zones[origin] {
+			if strings.EqualFold(zone.GeoTag, tag) {
+				z := zone
+				return &z
+			}
+		}
+	}
+	return nil
+}
+
 func (s *MemoryStorage) ReloadGeoDB(path string) error {
 	newReader, err := geoip2.Open(path)
 	if err != nil {
