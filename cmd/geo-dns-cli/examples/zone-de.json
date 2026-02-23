@@ -1,0 +1,19 @@
+{
+  "origin": "example.com.",
+  "geo_tag": "DE",
+  "soa": {
+    "ns": "ns1.example.com.",
+    "mbox": "admin.example.com.",
+    "serial": 2024010101,
+    "refresh": 86400,
+    "retry": 7200,
+    "expire": 3600000,
+    "min_ttl": 300
+  },
+  "records": [
+    { "name": "example.com.",     "type": "A",   "value": "46.20.30.40",       "ttl": 300 },
+    { "name": "www.example.com.", "type": "A",   "value": "46.20.30.40",       "ttl": 300 },
+    { "name": "example.com.",     "type": "AAAA","value": "2a01:4f8::1",       "ttl": 300 },
+    { "name": "example.com.",     "type": "MX",  "value": "10 mail.example.com.", "ttl": 3600 }
+  ]
+}
