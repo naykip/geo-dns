@@ -1,0 +1,24 @@
+{
+  "origin": "example.com.",
+  "geo_tag": "default",
+  "soa": {
+    "ns": "ns1.example.com.",
+    "mbox": "admin.example.com.",
+    "serial": 2024010101,
+    "refresh": 86400,
+    "retry": 7200,
+    "expire": 3600000,
+    "min_ttl": 300
+  },
+  "records": [
+    { "name": "example.com.",     "type": "A",    "value": "93.184.216.34",        "ttl": 300 },
+    { "name": "www.example.com.", "type": "A",    "value": "93.184.216.34",        "ttl": 300 },
+    { "name": "example.com.",     "type": "NS",   "value": "ns1.example.com.",     "ttl": 86400 },
+    { "name": "example.com.",     "type": "NS",   "value": "ns2.example.com.",     "ttl": 86400 },
+    { "name": "example.com.",     "type": "MX",   "value": "10 mail.example.com.", "ttl": 3600 },
+    { "name": "example.com.",     "type": "TXT",  "value": "v=spf1 a mx ~all",     "ttl": 3600 },
+    { "name": "mail.example.com.","type": "A",    "value": "93.184.216.35",        "ttl": 300 },
+    { "name": "ns1.example.com.", "type": "A",    "value": "93.184.216.1",         "ttl": 86400 },
+    { "name": "ns2.example.com.", "type": "A",    "value": "93.184.216.2",         "ttl": 86400 }
+  ]
+}
