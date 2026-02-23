@@ -26,7 +26,8 @@ func init() {
 func main() {
 	storage := NewStorage()
 	geoService := NewGeoService(storage)
-	api := NewAPIHandler(storage, geoService)
+	metrics := NewMetrics()
+	api := NewAPIHandler(storage, geoService, metrics)
 
 	apiPort := strings.TrimPrefix(os.Getenv("API_PORT"), ":")
 	if apiPort == "" {
@@ -39,7 +40,7 @@ func main() {
 
 	// DNS Server (UDP)
 	go func() {
-		dnsHandler := &DNSHandler{Storage: storage}
+		dnsHandler := &DNSHandler{Storage: storage, Metrics: metrics}
 		server := &dns.Server{Addr: ":" + dnsPort, Net: "udp", Handler: dnsHandler}
 		log.Printf("Starting DNS UDP on :%s", dnsPort)
 		server.ListenAndServe()
@@ -47,7 +48,7 @@ func main() {
 
 	// DNS Server (TCP)
 	go func() {
-		dnsHandler := &DNSHandler{Storage: storage}
+		dnsHandler := &DNSHandler{Storage: storage, Metrics: metrics}
 		server := &dns.Server{Addr: ":" + dnsPort, Net: "tcp", Handler: dnsHandler}
 		log.Printf("Starting DNS TCP on :%s", dnsPort)
 		server.ListenAndServe()
