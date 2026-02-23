@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract version from branch name
+        id: vars
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          VERSION="${BRANCH#release/}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch main and develop
+        run: |
+          git fetch origin main:main
+          git fetch origin develop:develop
+
+      - name: Merge release branch into main
+        run: |
+          git checkout main
+          git merge --no-ff "${{ steps.vars.outputs.branch }}" \
+            -m "chore(release): merge ${{ steps.vars.outputs.branch }} into main"
+          git push origin HEAD:main
+
+      - name: Create annotated tag
+        run: |
+          git tag -a "${{ steps.vars.outputs.version }}" \
+            -m "Release ${{ steps.vars.outputs.version }}"
+          git push origin "${{ steps.vars.outputs.version }}"
+
+      - name: Merge main back into develop
+        run: |
+          git checkout develop
+          git merge --no-ff main \
+            -m "chore(release): merge main back into develop after ${{ steps.vars.outputs.version }}"
+          git push origin HEAD:develop
+
+      - name: Create GitHub release with auto-generated notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.vars.outputs.version }}" \
+            --title "${{ steps.vars.outputs.version }}" \
+            --target main \
+            --generate-notes \
+            --verify-tag
+
+      - name: Delete release branch
+        run: git push origin --delete "${{ steps.vars.outputs.branch }}"
