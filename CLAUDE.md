@@ -129,15 +129,14 @@ git branch -d feature/my-feature
 **Цикл релиза:**
 ```bash
 git checkout -b release/vX.Y.Z develop
+# финальные правки если нужны
 git push -u origin release/vX.Y.Z
-# финальные правки если нужны, затем:
-git checkout main && git merge --no-ff release/vX.Y.Z
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-git push origin main && git push origin vX.Y.Z
-git checkout develop && git merge --no-ff release/vX.Y.Z
-git push origin develop
-git push origin --delete release/vX.Y.Z
-gh release create vX.Y.Z --title "vX.Y.Z" --target main
+# GitHub Actions автоматически:
+#   1. Мержит release/vX.Y.Z → main (--no-ff)
+#   2. Создаёт аннотированный тег vX.Y.Z
+#   3. Мержит main → develop (--no-ff)
+#   4. Публикует GitHub Release с авто-сгенерированными notes
+#   5. Удаляет ветку release/vX.Y.Z
 ```
 
 ## Notes
